@@ -1,0 +1,4 @@
+How long did this take (estimate)? 2 hours
+What were the enjoyable aspects of the lab? Creating the side by side barchart and scatterplot.
+What were the challenging parts of this lab? Remebering code from the last labs.
+What resources did you use? Include links to websites below. I used gemini to ask for syntax and git hub commands

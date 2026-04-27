@@ -1,0 +1,5 @@
+Include your web screenshot and mobile screenshot of your responsive scatterplot visualization. You can simply upload these to the GitHub classroom repo and call them “screenshot-web.png” and “screenshot-mobile.png”.
+How long did this take (estimate)? 3 hours
+What were the enjoyable aspects of the lab? Scrollytelling was interactive and fun.
+What were the challenging parts of this lab? Responsiveness code was hard to comprehend.
+What resources did you use? Include links to websites below.  I used Gemini for debugging purposes.

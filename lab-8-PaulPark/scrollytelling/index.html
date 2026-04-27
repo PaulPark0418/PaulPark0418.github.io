@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scrollytelling using D3 and Waypoints</title>
+    <link rel="icon" href="data:;base64,iVBORwOKGO=" />
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body> 
+    <div class="page">
+        <h1>An Assignment's Journal</h1>
+
+        <p>This scrollytelling example is based on the JS libraries D3 and Waypoints.</p>
+
+        <div class="container">
+            <div id="vis"></div>
+            <div id="prose">
+                <div class="step" id="step0">You have completed <span class="count" id="assignments-count"></span> assignments.</div>
+                <div class="step" id="step1"><span class="count" id="easy-assignment-count"></span> assignments are rated as easy.</div>
+                <div class="step" id="step2"><span class="count" id="difficult-assignment-count"></span> assignments are rated as difficult.</div>
+                <div class="step" id="step3">The most time consuming assignment was <i><span id="max-duration-name"></span></i><br>(<span class="count" id="max-duration"></span> hours).</div>
+                <div class="step" id="step4">The top 5 assignments with the longest time spent.</div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="../js/d3.v6.min.js"></script>
+    <script src="js/noframework.waypoints.min.js"></script>
+    <script src="js/scrollerVis.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

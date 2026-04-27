@@ -1,0 +1,42 @@
+body {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    background: #f7f7f7;
+  }
+
+/* Table styling */
+.tg  {
+    border-collapse:collapse;
+    border-spacing:0;
+}
+
+.tg td {
+    font-size:14px;
+    overflow:hidden;
+    padding:10px 5px;
+    word-break:normal;
+}
+.tg th{ 
+    font-size:14px;
+    font-weight:normal;
+    overflow:hidden;
+    padding:10px 5px;
+    word-break:normal;
+}
+.tg .tg-0pky{
+    border-color:inherit;
+    text-align:left;
+    vertical-align:top;
+}
+.tg .tg-sxqf{
+    border-color:inherit;
+    font-family:inherit;
+    text-align:left;
+    vertical-align:top;
+}
+.tg .tg-0lax{
+    text-align:left;
+    vertical-align:top;
+}
+        
