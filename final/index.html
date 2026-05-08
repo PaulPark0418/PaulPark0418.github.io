@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Faces of Data · Davidson Representation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=2026-05-07-2211">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <a class="skip-link" href="#dashboard-panel">Skip to dashboard</a>
+
+    <img id="dc-logo-long" src="davidsonlogolong.png" alt="Davidson College wordmark" />
+
+    <header class="page-top-band">
+        <div class="page-top-band-inner">
+            <div class="page-header">
+                <h1>Faces of Data</h1>
+                <p class="subtitle">Comparing published enrollment demographics with brochure imagery representation</p>
+            </div>
+        </div>
+        <div class="page-top-band-white-gap" aria-hidden="true"></div>
+        <button id="about-data-btn" class="about-data-btn about-data-btn--hero" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="about-data-popover">
+            <span class="about-data-btn__icon" aria-hidden="true">?</span>
+            <span class="about-data-btn__label">About the data</span>
+        </button>
+        <div id="about-data-popover" class="about-data-popover about-data-popover--hero" role="dialog" aria-modal="false" aria-label="About the data" hidden>
+            <h3 class="about-data-popover__title">About the data</h3>
+            <p class="about-data-popover__text">
+                This project analyzes demographic representation using two primary sources from 1999–2019: Davidson College Admission Brochures and the Institutional Factfile. To focus on racial representation, we utilized RStudio to consolidate gender-specific data into three unified categories: White, Black, and Other Race. All raw counts were converted into integers to ensure precise proportional calculations. No AI tools were used in the data cleaning or restructuring process.
+            </p>
+            <p class="about-data-popover__text">
+                For the 2003–2004 academic year, while enrollment data was available in the Factfile, the corresponding admission brochure was missing. To maintain transparency, we displayed the Factfile data while representing the brochure panel with a neutral grey grid. This visual choice ensures consistency with our interactive hover effects while clearly signaling the absence of marketing materials for that specific period.
+            </p>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <h2 class="sr-only">Compare two 100-square grids side by side; each icon stands for one student out of a hundred.</h2>
+
+        <section class="story-block grids-intro" aria-labelledby="grids-intro-heading">
+            <p class="story-kicker">Read the grids</p>
+            <h2 id="grids-intro-heading" class="story-step-title">Each face represents one student out of one hundred</h2>
+            <p class="story-lead">
+                Use the year slider and legend buttons to see how Davidson College's brochure imagery aligns with published enrollment demographics for White, Black, and Other categories.
+                Hover over the grid or push the buttons for more detail.
+            </p>
+        </section>
+
+        <div id="dashboard-panel" class="viz-layout">
+            <section id="similarity-score" class="similarity-panel similarity-panel--inline" aria-labelledby="similarity-heading">
+                <p id="similarity-alert" class="similarity-alert" role="alert" hidden></p>
+                <div id="similarity-panel-body">
+                    <div class="similarity-inline__row">
+                        <div class="similarity-inline__text">
+                            <p class="similarity-inline__eyebrow">Alignment score</p>
+                            <h2 id="similarity-heading" class="similarity-inline__title">Brochure vs. enrollment demographics</h2>
+                            <p class="similarity-panel__intro similarity-panel__intro--inline">Computed from the L1 distance between the three-group share vectors: score = (1 − Σ|pᵢ − qᵢ| / 2) × 100.</p>
+                        </div>
+                        <div class="similarity-inline__score-block">
+                            <span id="similarity-percent" class="similarity-panel__number similarity-panel__number--inline" aria-labelledby="similarity-heading">—</span>
+                            <span class="similarity-panel__unit similarity-panel__unit--stack">% aligned</span>
+                        </div>
+                    </div>
+                    <p class="similarity-panel__note similarity-panel__note--inline">Higher values indicate closer alignment between brochure imagery and published enrollment demographics for White, Black, and Other categories.</p>
+                    <p class="sr-only" id="similarity-help-note">Hover dots in the grids for breakdown by group.</p>
+                </div>
+            </section>
+
+            <div class="viz-charts-row">
+                <aside class="year-rail" aria-labelledby="year-control-heading">
+                    <h3 id="year-control-heading" class="viz-year-heading">Year</h3>
+                    <div id="controls" class="control-card control-card--rail">
+                        <label class="control-label" for="year-slider">Incoming Class</label>
+                        <div class="year-display-stack">
+                            <span id="year-display" class="year-display year-display--rail">1999-2000</span>
+                        </div>
+                        <div class="control-row control-row--rail">
+                            <input type="range" id="year-slider" min="1999" max="2019" step="1" value="1999" aria-describedby="viz-year-help similarity-help-note">
+                        </div>
+                        <p id="viz-year-help" class="viz-year-minihelp">Years in dataset</p>
+                    </div>
+                    <div id="legend-tooltip-panel" class="legend-tooltip-panel" hidden></div>
+                    <section class="trend-panel card" aria-labelledby="trend-heading">
+                        <h4 id="trend-heading" class="trend-panel__title">Enrollment trends</h4>
+                        <p class="trend-panel__desc">Y-axis shows enrollment share (% of the incoming class) for each group across years—not the alignment score.</p>
+                        <svg id="trend-chart" role="img" aria-label="Line chart showing enrollment shares over time for White, Black, and Other groups"></svg>
+                        <p class="trend-panel__note">Shares are based on enrollment totals for each incoming class year.</p>
+                    </section>
+                </aside>
+
+                <div>
+                    <div id="legend" class="legend-wrap legend-above-grids" role="toolbar" aria-label="Highlight a demographic group">
+                        <button type="button" class="legend-item" data-race="other" aria-pressed="false">
+                            <span class="legend-swatch legend-other" aria-hidden="true"></span>
+                            <span>Other</span>
+                        </button>
+                        <button type="button" class="legend-item" data-race="black" aria-pressed="false">
+                            <span class="legend-swatch legend-black" aria-hidden="true"></span>
+                            <span>Black</span>
+                        </button>
+                        <button type="button" class="legend-item" data-race="white" aria-pressed="false">
+                            <span class="legend-swatch legend-white" aria-hidden="true"></span>
+                            <span>White</span>
+                        </button>
+                    </div>
+
+                    <div class="container">
+                        <div id="actual-grid-container" class="grid-panel card">
+                            <h2 class="grid-panel__title"><span class="grid-panel__eyebrow">Data</span>Enrollment mix</h2>
+                            <svg id="actual-grid" role="img" aria-label="100 icons representing enrollment by race category for selected year"></svg>
+                        </div>
+                        <div id="brochure-grid-container" class="grid-panel card">
+                            <h2 class="grid-panel__title"><span class="grid-panel__eyebrow">Brochure</span>Photo faces</h2>
+                            <svg id="brochure-grid" role="img" aria-label="100 icons summarizing brochure photo representation"></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="site-footer" aria-label="Site credits">
+        <p class="site-footer__text">
+            The website is created by Paul Park and Erica Won for CSC 362: Data Visualization in Davidson College.
+            <em>The authors created the skeleton code for the website and used Cursor AI for the rest of the code.</em>
+        </p>
+    </footer>
+
+    <script src="main.js"></script>
+</body>
+</html>
+
