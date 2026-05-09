@@ -364,9 +364,48 @@ function buildEnrollmentSeries(factRows) {
     });
 }
 
-function initTrendChart(factRows) {
+function buildBrochureSeries(archiveRows, years) {
+    const toNumber = (v) => {
+        const n = +v;
+        return Number.isFinite(n) ? n : 0;
+    };
+
+    const byYear = new Map();
+    archiveRows.forEach((d) => {
+        const year = d.year;
+        if (!year) return;
+        const acc = byYear.get(year) ?? { white: 0, black: 0, other: 0, total: 0 };
+        const white = toNumber(d.white_female) + toNumber(d.white_male);
+        const black = toNumber(d.black_female) + toNumber(d.black_male);
+        const other = toNumber(d.other_race_female) + toNumber(d.other_race_male);
+        const total = white + black + other;
+        acc.white += white;
+        acc.black += black;
+        acc.other += other;
+        acc.total += total;
+        byYear.set(year, acc);
+    });
+
+    return years.map((year) => {
+        const row = byYear.get(year);
+        const denom = row?.total ?? 0;
+        return {
+            year,
+            white: denom > 0 ? (row.white / denom) * 100 : NaN,
+            black: denom > 0 ? (row.black / denom) * 100 : NaN,
+            other: denom > 0 ? (row.other / denom) * 100 : NaN
+        };
+    });
+}
+
+function initTrendChart(factRows, archiveRows) {
     const svg = d3.select("#trend-chart");
     if (svg.empty()) return null;
+
+    const titleNode = d3.select("#trend-heading");
+    const descNode = d3.select("#trend-desc");
+    const noteNode = d3.select("#trend-note");
+    const toggleBtn = document.querySelector("#trend-mode-toggle");
 
     const width = 320;
     const height = 190;
@@ -377,8 +416,15 @@ function initTrendChart(factRows) {
     svg.attr("viewBox", `0 0 ${width} ${height}`)
         .attr("preserveAspectRatio", "xMidYMid meet");
 
-    const series = buildEnrollmentSeries(factRows);
-    const years = series.map(d => d.year);
+    const years = factRows.map(d => d.year);
+    const seriesEnrollment = buildEnrollmentSeries(factRows);
+    const seriesBrochure = buildBrochureSeries(archiveRows ?? [], years);
+    const seriesByMode = {
+        enrollment: seriesEnrollment,
+        brochure: seriesBrochure
+    };
+    let trendMode = "enrollment";
+    let series = seriesByMode[trendMode];
 
     const x = d3.scalePoint()
         .domain(years)
@@ -451,7 +497,10 @@ function initTrendChart(factRows) {
         .attr("text-anchor", "middle")
         .text("Incoming class year");
 
+    const defined = (d, key) => Number.isFinite(d?.[key]);
+
     const line = (key) => d3.line()
+        .defined(d => defined(d, key))
         .x(d => x(d.year))
         .y(d => y(d[key]))
         .curve(d3.curveMonotoneX);
@@ -494,6 +543,7 @@ function initTrendChart(factRows) {
         const row = series.find(d => d.year === year);
         if (!row) return;
         const pct = Number.isFinite(row[key]) ? row[key] : 0;
+        const metricLabel = trendMode === "brochure" ? "Brochure share" : "Enrollment share";
         tooltipBesideGrids = false;
         tooltip
             .style("opacity", 1)
@@ -501,7 +551,7 @@ function initTrendChart(factRows) {
                 `<dl class="tooltip-stats">` +
                 `<dt>Group</dt><dd>${raceLabels[key] ?? key}</dd>` +
                 `<dt>Year</dt><dd>${year}</dd>` +
-                `<dt>Enrollment share</dt><dd><strong>${pct.toFixed(1)}%</strong></dd>` +
+                `<dt>${metricLabel}</dt><dd><strong>${pct.toFixed(1)}%</strong></dd>` +
                 `</dl>`
             )
             .style("left", `${event.pageX + 12}px`)
@@ -528,13 +578,69 @@ function initTrendChart(factRows) {
         markerLine.attr("x1", xPos).attr("x2", xPos);
         markerDots
             .attr("cx", xPos)
-            .attr("cy", k => y(row[k]));
+            .attr("cy", k => y(Number.isFinite(row[k]) ? row[k] : 0));
+    }
+
+    function swapTrendText(nextMode) {
+        const title = nextMode === "brochure" ? "Brochure representation trends" : "Enrollment trends";
+        const desc = nextMode === "brochure"
+            ? "Y-axis shows brochure share (% of faces counted) for each group across years—not the alignment score."
+            : "Y-axis shows enrollment share (% of the incoming class) for each group across years—not the alignment score.";
+        const note = nextMode === "brochure"
+            ? "Shares are based on totals from brochure photo counts for each year in the archive dataset."
+            : "Shares are based on enrollment totals for each incoming class year.";
+
+        titleNode.classed("trend-panel__title--swap", true);
+        descNode.classed("trend-panel__desc--swap", true);
+        noteNode.classed("trend-panel__note--swap", true);
+
+        window.setTimeout(() => {
+            titleNode.text(title);
+            descNode.text(desc);
+            noteNode.text(note);
+            titleNode.classed("trend-panel__title--swap", false);
+            descNode.classed("trend-panel__desc--swap", false);
+            noteNode.classed("trend-panel__note--swap", false);
+        }, 150);
+    }
+
+    function setTrendMode(nextMode, options = {}) {
+        if (!(nextMode in seriesByMode)) return;
+        if (nextMode === trendMode && options.force !== true) return;
+        trendMode = nextMode;
+        series = seriesByMode[trendMode];
+
+        swapTrendText(trendMode);
+
+        const duration = options.animate === false ? 0 : 520;
+        g.select(".trend-lines")
+            .selectAll("path")
+            .data(keys)
+            .interrupt()
+            .transition()
+            .duration(duration)
+            .ease(d3.easeCubicOut)
+            .attr("d", k => line(k)(series));
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+            const next = trendMode === "enrollment" ? "brochure" : "enrollment";
+            toggleBtn.setAttribute("aria-pressed", next === "brochure" ? "true" : "false");
+            toggleBtn.textContent = next === "brochure" ? "Enrollment" : "Brochure";
+            toggleBtn.setAttribute(
+                "aria-label",
+                next === "brochure" ? "Switch to enrollment trends" : "Switch to brochure representation trends"
+            );
+            setTrendMode(next, { animate: true });
+            update(currentYear);
+        });
     }
 
     // Initialize at first year
     if (years.length) update(years[0]);
 
-    return { update };
+    return { update, setTrendMode };
 }
 
 // 2. Load and preprocess data
@@ -561,7 +667,7 @@ Promise.all([
         .attr("max", years.length - 1)
         .attr("value", 0);
 
-    trendChart = initTrendChart(factfileData);
+    trendChart = initTrendChart(factfileData, archiveData);
 
     // Slider event: update on every input change
     slider.on("input", function() {

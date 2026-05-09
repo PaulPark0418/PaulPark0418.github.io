@@ -85,10 +85,15 @@
                     </div>
                     <div id="legend-tooltip-panel" class="legend-tooltip-panel" hidden></div>
                     <section class="trend-panel card" aria-labelledby="trend-heading">
-                        <h4 id="trend-heading" class="trend-panel__title">Enrollment trends</h4>
-                        <p class="trend-panel__desc">Y-axis shows enrollment share (% of the incoming class) for each group across years—not the alignment score.</p>
+                        <div class="trend-panel__title-row">
+                            <h4 id="trend-heading" class="trend-panel__title">Enrollment trends</h4>
+                            <button id="trend-mode-toggle" class="trend-toggle" type="button" aria-pressed="false" aria-label="Switch to brochure representation trends">
+                                Brochure
+                            </button>
+                        </div>
+                        <p id="trend-desc" class="trend-panel__desc">Y-axis shows enrollment share (% of the incoming class) for each group across years—not the alignment score.</p>
                         <svg id="trend-chart" role="img" aria-label="Line chart showing enrollment shares over time for White, Black, and Other groups"></svg>
-                        <p class="trend-panel__note">Shares are based on enrollment totals for each incoming class year.</p>
+                        <p id="trend-note" class="trend-panel__note">Shares are based on enrollment totals for each incoming class year.</p>
                     </section>
                 </aside>
 
