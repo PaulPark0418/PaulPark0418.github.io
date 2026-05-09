@@ -29,6 +29,9 @@ let legendPinnedRace = null;
 /** When true, tile mousemove must not reposition the tooltip (legend anchored it by the grids). */
 let tooltipBesideGrids = false;
 
+/** Last numeric values shown in the pinned legend panel (for smooth transitions on year change). */
+let legendPanelNumericSnapshot = null;
+
 let trendChart = null;
 
 const raceLabels = {
@@ -60,27 +63,45 @@ function resetTilesOpacity() {
         .style("opacity", 1);
 }
 
+function getLegendPanelNumericValues(selectedType) {
+    if (!currentStats) return null;
+    const pct = currentStats.actualPct;
+    const bp = currentStats.brochurePct;
+    return {
+        actualTotal: currentStats.totals.actual ?? 0,
+        brochureTotal: currentStats.totals.brochure ?? 0,
+        actualGroupCount: currentStats.actual[selectedType] ?? 0,
+        brochureGroupCount: currentStats.brochure[selectedType] ?? 0,
+        actualShare: pct?.[selectedType] ?? 0,
+        brochureShare: bp?.[selectedType] ?? 0
+    };
+}
+
 function raceTooltipContent(selectedType) {
     if (!currentStats) return "";
     const pct = currentStats.actualPct;
     const bp = currentStats.brochurePct;
     const group = raceLabels[selectedType] ?? selectedType;
-    const actualGroupCount = currentStats.actual[selectedType] ?? 0;
-    const brochureGroupCount = currentStats.brochure[selectedType] ?? 0;
-    const actualTotal = currentStats.totals.actual ?? 0;
-    const brochureTotal = currentStats.totals.brochure ?? 0;
-    const actualShare = pct?.[selectedType] ?? 0;
-    const brochureShare = bp?.[selectedType] ?? 0;
+    const nums = getLegendPanelNumericValues(selectedType);
+    if (!nums) return "";
+    const {
+        actualTotal,
+        brochureTotal,
+        actualGroupCount,
+        brochureGroupCount,
+        actualShare,
+        brochureShare
+    } = nums;
     return (
         `<dl class="tooltip-stats">` +
         `<dt>Group</dt><dd>${group}</dd>` +
         `<dt>Year</dt><dd>${currentYear}</dd>` +
-        `<dt>Total count</dt><dd>${actualTotal}</dd>` +
-        `<dt>Total ${group} count</dt><dd>${actualGroupCount}</dd>` +
-        `<dt>Total ${group} share</dt><dd><strong>${actualShare.toFixed(1)}%</strong></dd>` +
-        `<dt>Brochure count</dt><dd>${brochureTotal}</dd>` +
-        `<dt>Brochure ${group} count</dt><dd>${brochureGroupCount}</dd>` +
-        `<dt>Brochure ${group} share</dt><dd><strong>${brochureShare.toFixed(1)}%</strong></dd>` +
+        `<dt>Total count</dt><dd><span class="legend-panel-num" data-field="actualTotal">${actualTotal}</span></dd>` +
+        `<dt>Total ${group} count</dt><dd><span class="legend-panel-num" data-field="actualGroupCount">${actualGroupCount}</span></dd>` +
+        `<dt>Total ${group} share</dt><dd><strong><span class="legend-panel-num legend-panel-pct" data-field="actualShare">${actualShare.toFixed(1)}</span>%</strong></dd>` +
+        `<dt>Brochure count</dt><dd><span class="legend-panel-num" data-field="brochureTotal">${brochureTotal}</span></dd>` +
+        `<dt>Brochure ${group} count</dt><dd><span class="legend-panel-num" data-field="brochureGroupCount">${brochureGroupCount}</span></dd>` +
+        `<dt>Brochure ${group} share</dt><dd><strong><span class="legend-panel-num legend-panel-pct" data-field="brochureShare">${brochureShare.toFixed(1)}</span>%</strong></dd>` +
         `</dl>`
     );
 }
@@ -112,15 +133,75 @@ function hideRaceTooltip() {
     tooltipBesideGrids = false;
 }
 
-function showLegendTooltipPanel(selectedType) {
+/** Parse numeric fields from the currently rendered pinned panel (mid-transition safe). */
+function readLegendPanelNumericSnapshotFromDom(selectedType) {
+    const nums = {};
+    let count = 0;
+    legendTooltipPanel.selectAll(".legend-panel-num").each(function() {
+        const field = this.dataset.field;
+        const raw = parseFloat(this.textContent);
+        if (!field || !Number.isFinite(raw)) return;
+        nums[field] = raw;
+        count++;
+    });
+    if (count < 6) return null;
+    return { race: selectedType, ...nums };
+}
+
+function showLegendTooltipPanel(selectedType, options = {}) {
     if (!currentStats) return;
     if (legendTooltipPanel.empty()) return;
+    const animate = options.animate !== false;
+    const prevSnap = legendPanelNumericSnapshot;
+    const nextVals = getLegendPanelNumericValues(selectedType);
+    if (!nextVals) return;
+
+    const panelEl = legendTooltipPanel.node();
+    const panelWasVisible = panelEl != null && !panelEl.hasAttribute("hidden");
+    const domSnap = panelWasVisible ? readLegendPanelNumericSnapshotFromDom(selectedType) : null;
+    const tweenBase =
+        domSnap && domSnap.race === selectedType ? domSnap : prevSnap;
+
     legendTooltipPanel
         .html(raceTooltipContent(selectedType))
         .attr("hidden", null);
+
+    const canTween =
+        animate &&
+        tweenBase &&
+        tweenBase.race === selectedType &&
+        legendTooltipPanel.selectAll(".legend-panel-num").size() > 0;
+
+    if (!canTween) {
+        legendPanelNumericSnapshot = { race: selectedType, ...nextVals };
+        return;
+    }
+
+    const duration = config.transitionDuration;
+
+    legendTooltipPanel.selectAll(".legend-panel-num").each(function() {
+        const el = this;
+        const field = el.dataset.field;
+        const start = tweenBase[field];
+        const end = nextVals[field];
+        if (!Number.isFinite(start) || !Number.isFinite(end)) return;
+        const isPct = el.classList.contains("legend-panel-pct");
+        const sel = d3.select(el);
+        sel.text(isPct ? start.toFixed(1) : String(Math.round(start)));
+        sel.interrupt().transition().duration(duration).ease(d3.easeCubicOut).tween("text", () => {
+            const i = d3.interpolateNumber(start, end);
+            return t => {
+                const v = i(t);
+                sel.text(isPct ? v.toFixed(1) : String(Math.round(v)));
+            };
+        });
+    });
+
+    legendPanelNumericSnapshot = { race: selectedType, ...nextVals };
 }
 
 function hideLegendTooltipPanel() {
+    legendPanelNumericSnapshot = null;
     if (legendTooltipPanel.empty()) return;
     legendTooltipPanel.html("").attr("hidden", "");
 }
@@ -606,6 +687,11 @@ function updateVis(year) {
             { white: brochureWhite, black: brochureBlack, other: brochureOther }
         );
         animateSimilarityScore(similarityPct);
+    }
+
+    // Keep pinned legend info panel in sync with the selected year (counts / shares).
+    if (legendPinnedRace != null && legendPinnedRace in raceLabels) {
+        showLegendTooltipPanel(legendPinnedRace, { animate: true });
     }
 
     // Brochure image section removed.
